@@ -66,9 +66,7 @@ class run_chirp_ha:
         try:
             with open(self._configuration_file, 'r') as file:
                 config = json.load(file)
-            print("start.py o", config)
             config = INTERNAL_CONFIG | config
-            print("start.py u", config)
             self._config = config
             _LOGGER.debug("Configuration %s:", self._config)
             _LOGGER.info("ChirpHA started")
