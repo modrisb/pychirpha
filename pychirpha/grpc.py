@@ -34,6 +34,7 @@ class ChirpGrpc:
     # """ChirpStack api details @ https://github.com/chirpstack/chirpstack/tree/master/api/proto/api"""
     application_id: str | None = None
     gateway_id: str | None = None
+    _channel = None
 
     def __init__(self, config, version) -> None:
         """Open connection to ChirpStack api server."""
