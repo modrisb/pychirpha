@@ -13,11 +13,11 @@ from typing import Final
 import threading
 import traceback
 
-from .grpc import ChirpGrpc
-from .mqtt import ChirpToHA
-from .const import CONF_API_SERVER, CONF_API_PORT, CONF_MQTT_SERVER, CONF_MQTT_PORT, CONF_OPTIONS_LOG_LEVEL
-from .const import DEFAULT_API_SERVER, DEFAULT_API_PORT, DEFAULT_MQTT_PORT, DEFAULT_MQTT_SERVER
-from .const import CONF_MQTT_CHIRPSTACK_PREFIX, DEFAULT_MQTT_CHIRPSTACK_PREFIX, CLASSES
+from pychirpha.grpc import ChirpGrpc
+from pychirpha.mqtt import ChirpToHA
+from pychirpha.const import CONF_API_SERVER, CONF_API_PORT, CONF_MQTT_SERVER, CONF_MQTT_PORT, CONF_OPTIONS_LOG_LEVEL
+from pychirpha.const import DEFAULT_API_SERVER, DEFAULT_API_PORT, DEFAULT_MQTT_PORT, DEFAULT_MQTT_SERVER
+from pychirpha.const import CONF_MQTT_CHIRPSTACK_PREFIX, DEFAULT_MQTT_CHIRPSTACK_PREFIX, CLASSES, DETAILED_LEVEL_STR
 
 # Date/Time formats
 FORMAT_DATE: Final = "%Y-%m-%d"
@@ -83,7 +83,7 @@ class run_chirp_ha:
             self._mqtt_client = ChirpToHA(config, __version__, CLASSES, self._grpc_client)
             self._mqtt_client._client.loop_forever()
         except Exception as error:
-            if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            if logging.getLogger().getEffectiveLevel() in (logging.DEBUG, DETAILED_LEVEL_STR):
                 _LOGGER.exception("Chirp failed: %s", str(error))
             else:
                 _LOGGER.error("Chirp failed: %s", str(error))

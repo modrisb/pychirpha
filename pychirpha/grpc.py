@@ -11,7 +11,7 @@ from chirpstack_api import api
 import dukpy
 import grpc
 
-from .const import (
+from pychirpha.const import (
     CHIRPSTACK_API_KEY_NAME,
     CHIRPSTACK_APPLICATION,
     CHIRPSTACK_TENANT,
@@ -23,7 +23,7 @@ from .const import (
     ERRMSG_DEVICE_IGNORED,
     WARMSG_APPID_WRONG,
 )
-from .getha import generate_getHaDeviceInfo
+from pychirpha.getha import generate_getHaDeviceInfo
 
 _LOGGER = logging.getLogger(__name__)
 

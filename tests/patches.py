@@ -8,8 +8,6 @@ from queue import Queue, ShutDown
 import threading
 import time
 
-from homeassistant.config_entries import ConfigEntryState
-
 _LOGGER = logging.getLogger(__name__)
 
 MODEL_SIZES = [
@@ -72,16 +70,16 @@ CODEC = [  # array of (no_of_sensors, "codec_code")
         1,
         'function getHaDeviceInfo() {return {device: {manufacturer: "vendor0",model: "model1",},entities: {counter:{entity_conf: {value_template: "{{ value_json.object.counter }}",device_class: "gas",state_class: "total_increasing",command_topic:"{command_topic}",unit_of_measurement: "m³"}},}};}',
     ),
-    (0, 'function getHaDeviceInf() {return {device:""}}'),  # 11
-    (0, 'function getHaDeviceInfo() {retur {device:,""}}'),  # 12
-    (0, "function getHaDeviceInfo() {return "),  # 13
-    (  # 14
+    (0, 'function getHaDeviceInf() {return {device:""}}'), #11
+    (0, 'function getHaDeviceInfo() {retur {device:,""}}'), #12
+    (0, "function getHaDeviceInfo() {return "),             #13
+    (   #14
         0,
         'function getHaDeviceInfo() {return {device: {manufacturer: "vendor0",model: \'model1\',},entities: {counter:{entity_conf: {value_template: "{{ value_json.object.counter }}",device_class: / \n"gas",state_class: "total_increasing",unit_of_measurement: "m³"}}}};}',
     ),
     (  # 15
         1,
-        'function getHaDeviceInfo() {return {device: {manufacturer: "vendor0",model: "model1",},entities: {counter:{entity_conf: {value_template: "{{ value_json.object.counter }}",device_class: "humidifier",state_class: "total_increasing",unit_of_measurement: "m³"}},}};}',
+        'function getHaDeviceInfo() {return {device: {manufacturer: "vendor0",model: "model1",},entities: {counter:{entity_conf: {value_template: \"{{ value_json.object.counter }}\",device_class: "humidifier",state_class: "total_increasing",unit_of_measurement: "m³"}},}};}',
     ),
     (  # 16
         1,
@@ -160,11 +158,11 @@ CODEC = [  # array of (no_of_sensors, "codec_code")
         1,
         'function getHaDeviceInfo() {return {device: {manufacturer: "vendor0",model: "model1",dev_euidev_eui0:{model:"model1a"}},entities: {counter:{entity_conf: {dev_euidev_eui0:{device_class:"water"}, expire_after: "{None}",device_class: "gas"}}}};}',
     ),
-    (  # 22
-        1,
+    (   #22
+        1,  #
         'function getHaDeviceInfo() {return {device: {manufacturer: "vendor0",model: "model1",},entities: {counter:{entity_conf: {value_template: "{{ value_json.object.counter }}",device_class: "gas001",state_class: "total_increasing",unit_of_measurement: "m³", enabled_by_default:false}},}};}',
     ),
-    (  # 23
+    (   #23
         6,
         "\
         function getHaDeviceInfo() {\
@@ -185,7 +183,7 @@ CODEC = [  # array of (no_of_sensors, "codec_code")
         }\
         ",
     ),
-    (  # 24
+    (   #24
         2,
         "\
         ",
@@ -260,8 +258,6 @@ class mqtt:
     class Client:
         """Mock paho mqtt Client class."""
 
-        hass = None
-        config = None
         _publish_count = 0
         _published = []
         _subscribed = set()
@@ -278,9 +274,10 @@ class mqtt:
         _run_loop = True
         _block_loop = True
 
-        def __init__(self, version) -> None:
+        def __init__(self, version):
             """Mock Client class initialization."""
             self._loop_thread_inner = threading.Thread(target=self._loop_forever)
+
 
         def __new__(cls, version):
             """Implement singleton for test."""
@@ -293,7 +290,7 @@ class mqtt:
 
         def connect(self, host, port):
             """Mock connect function, raise exception if requested."""
-            _LOGGER.info("MQTT connect %s", self._open_count)
+            _LOGGER.info("MQTT connect %s, connected %s", self._open_count, self._connected)
             if not self._connected:
                 if self._open_count == 0:
                     self._published = []
@@ -323,10 +320,8 @@ class mqtt:
 
         def loop_start(self):
             """Mock loop_start function."""
-            _LOGGER.detail("loop_start entered")
             self._block_loop = False
             self.loop_forever()
-            _LOGGER.detail("loop_start exiting")
             return 0
 
         def loop_read(self, max_packets: int = 1):
@@ -344,7 +339,7 @@ class mqtt:
                 reason_code.is_failure = get_size("mqtt") == 0
                 reason_code.value = 135
                 self.on_connect(None, None, None, reason_code, None)
-            #self.disconnect()
+            self.disconnect()
             return 0
 
         def loop_forever(self):
@@ -354,10 +349,9 @@ class mqtt:
                 reason_code.is_failure = get_size("mqtt") == 0
                 reason_code.value = 135
                 self.on_connect(None, None, None, reason_code, None)
-            if not self._loop_thread_inner.is_alive():
-                self._loop_thread_inner.start()
-                if self._block_loop:
-                    self._loop_thread_inner.join()
+            self._loop_thread_inner.start()
+            if self._block_loop:
+                self._loop_thread_inner.join()
             if not get_size("publish") and self._publish_count > 0:
                 raise Exception("MQTT request processing error")  # pylint: disable=broad-exception-raised  # noqa: TRY002
 
@@ -382,7 +376,7 @@ class mqtt:
                 ):  # reset on configure request
                     self.reset_stats()
                 if (
-                    self.on_message
+                    self.on_message and self._connected
                     and msg[1] is not None
                     and sub_topics[-1] in self._subscribed
                 ):
@@ -410,6 +404,7 @@ class mqtt:
 
         def unsubscribe(self, topic):
             """Mock unsubscribe function."""
+            _LOGGER.info("unsubscribe from %s with return code %s", topic, (0, 0) if get_size("unsubscribe") else (1, 1))
             return (0, 0) if get_size("unsubscribe") else (1, 1)
 
         def loop_stop(self):
@@ -418,17 +413,19 @@ class mqtt:
 
         def disconnect(self):
             """Mock disconnect function."""
-            _LOGGER.detail("MQTT disconnect, open count %s, connected %s", self._open_count, self._connected)
             if self._open_count == 1:
                 if self._connected:
                     self._run_loop = False
                     self._connected = False
                     self._publish_queue.shutdown(immediate=True)
+                    self.on_message = None
+                    self.on_connect = None
+                    self.on_publish = None
                     if self._loop_thread_inner.is_alive():
                         self._loop_thread_inner.join()
-            if self._open_count > 0:
+            if self._open_count>0:
                 self._open_count = self._open_count - 1
-            _LOGGER.detail("MQTT disconnect, open count %s, connected %s", self._open_count, self._connected)
+            _LOGGER.info("MQTT disconnect %s %s", self._open_count, self._connected)
             return 0
 
         # for testing only
@@ -458,18 +455,16 @@ class mqtt:
         def reset_mock(self):
             """Reset mock - test extension."""
             set_size()
-            while self._open_count > 0:
+            while self._open_count>0:
                 self.disconnect()
 
         def check_mock_status(self):
             """Check mock status - test extension."""
-            return (
-                self._publish_queue
-                and self._publish_queue.qsize() == 0
-                and self._open_count == 0
-                and not self._loop_thread_inner.is_alive()
-            )
-
+            status = True
+            status = status and (self._publish_queue and self._publish_queue.qsize()==0)
+            status = status and (self._open_count==0)
+            status = status and (not self._loop_thread_inner.is_alive())
+            return status
 
 class api:
     """ChirpStack api mock implementation."""
@@ -477,7 +472,7 @@ class api:
     class TenantServiceStub:
         """TenantServiceStub class mock implementation."""
 
-        def __init__(self, channel) -> None:
+        def __init__(self, channel):
             """TenantServiceStub class init mock implementation."""
 
         def List(self, listTenantsReq, metadata):
@@ -503,15 +498,11 @@ class api:
             request.id = f"TenantId{no_of_tenants}"
             return request
 
-    class ListTenantsRequest:
+    def ListTenantsRequest():
         """Prepare list tenants request object, initialize only used in test fields."""
-
-        def __init__(self, limit=None, offset=None, search=None, user_id=None) -> None:
-            """Prepare list tenants request object, initialize only used in test fields."""
-            self.limit: int | None = limit
-            self.offset: int | None = offset
-            self.search: str | None = search
-            self.user_id: str | None = user_id
+        request = lambda: None  # noqa: E731
+        request.limit = None
+        return request
 
     def CreateTenantRequest():
         """Prepare create tenant request object, initialize only used in test fields."""
@@ -524,8 +515,7 @@ class api:
 
     class ApplicationServiceStub:
         """Application service implementation."""
-
-        def __init__(self, channel) -> None:
+        def __init__(self, channel):
             """Application service initialization implementation."""
 
         def List(self, listApplicationsReq, metadata):
@@ -538,12 +528,8 @@ class api:
                     appl = lambda: None  # noqa: E731
                     appl.name = f"ApplicationName{i}"
                     appl.id = f"ApplicationId{i}"
-                    ii = (
-                        i
-                        if get_size("single_tenant") < 0
-                        else get_size("single_tenant")
-                    )
-                    appl.tenant_id = f"TenantId{ii}"  # to enable app search by tenant id and have sevearl apps returned
+                    ii = i if get_size("single_tenant")<0 else get_size("single_tenant")
+                    appl.tenant_id = f"TenantId{ii}"    # to enable app search by tenant id and have sevearl apps returned
                     if listApplicationsReq.tenant_id == appl.tenant_id:
                         request.result.append(appl)
             request.total_count = no_of_applications
@@ -569,7 +555,6 @@ class api:
             request.id = f"ApplicationId{no_of_applications}"
             return request
 
-    @staticmethod
     def ListApplicationsRequest(tenant_id=None):
         """List applications request object."""
         request = lambda: None  # noqa: E731
@@ -577,14 +562,12 @@ class api:
         request.tenant_id = tenant_id
         return request
 
-    @staticmethod
     def GetApplicationRequest(id=None):
         """Get application description by ID."""
         request = lambda: None  # noqa: E731
         request.id = id
         return request
 
-    @staticmethod
     def CreateApplicationRequest():
         """Create application request."""
         request = lambda: None  # noqa: E731
@@ -595,8 +578,7 @@ class api:
 
     class DeviceServiceStub:
         """Device service implementation."""
-
-        def __init__(self, channel) -> None:
+        def __init__(self, channel):
             """Device service initialization implementation."""
 
         def List(self, listDevicesReq, metadata=None):
@@ -641,7 +623,6 @@ class api:
             """Get mocked device create request response."""
             return lambda: None
 
-    @staticmethod
     def ListDevicesRequest():
         """Get list devices request object, only properties used in test are initialized."""
         request = lambda: None  # noqa: E731
@@ -649,7 +630,6 @@ class api:
         request.application_id = None
         return request
 
-    @staticmethod
     def GetDeviceRequest(dev_eui=None):
         """Get device request object, only properties used in test are initialized."""
         request = lambda: None  # noqa: E731
@@ -658,8 +638,7 @@ class api:
 
     class DeviceProfileServiceStub:
         """Device profile service implementation."""
-
-        def __init__(self, channel) -> None:
+        def __init__(self, channel):
             """Device profile service initialization implementation."""
 
         def List(self, listDeviceProfileReq, metadata):
@@ -704,44 +683,44 @@ class api:
                     1
                 ]
             request.device_profile.name = f"profile_name{dev_no}"
-            request.device_profile.description = "Man_" + request.device_profile.name
+            request.device_profile.description = "Man_"+request.device_profile.name
             request.device_profile.mac_version = 0
-            if "zeroentityvalues" in request.device_profile.payload_codec_script:
-                measurement = lambda: None  # noqa: E731
+            if 'zeroentityvalues' in request.device_profile.payload_codec_script:
+                measurement = lambda: None
                 measurement.name = "s0"
                 request.device_profile.measurements["s0"] = measurement
-                measurement = lambda: None  # noqa: E731
+                measurement = lambda: None
                 measurement.name = "s1"
                 request.device_profile.measurements["s1"] = measurement
-                measurement = lambda: None  # noqa: E731
+                measurement = lambda: None
                 measurement.name = "l0"
                 request.device_profile.measurements["l0"] = measurement
-                measurement = lambda: None  # noqa: E731
+                measurement = lambda: None
                 measurement.name = "l1"
                 request.device_profile.measurements["l1"] = measurement
-                measurement = lambda: None  # noqa: E731
+                measurement = lambda: None
                 measurement.name = "i0"
                 request.device_profile.measurements["i0"] = measurement
-                measurement = lambda: None  # noqa: E731
+                measurement = lambda: None
                 measurement.name = "i1"
                 request.device_profile.measurements["i1"] = measurement
             else:
-                measurement = lambda: None  # noqa: E731
+                measurement = lambda: None
                 measurement.name = "counter"
                 request.device_profile.measurements["counter"] = measurement
-                measurement = lambda: None  # noqa: E731
+                measurement = lambda: None
                 measurement.name = "battery"
                 request.device_profile.measurements["battery"] = measurement
-                measurement = lambda: None  # noqa: E731
+                measurement = lambda: None
                 measurement.name = "battery_voltage"
                 request.device_profile.measurements["battery_voltage"] = measurement
-                measurement = lambda: None  # noqa: E731
+                measurement = lambda: None
                 measurement.name = "rssi"
                 request.device_profile.measurements["rssi"] = measurement
-                measurement = lambda: None  # noqa: E731
+                measurement = lambda: None
                 measurement.name = "state"
                 request.device_profile.measurements["state"] = measurement
-                measurement = lambda: None  # noqa: E731
+                measurement = lambda: None
                 measurement.name = "altitude"
                 request.device_profile.measurements["altitude"] = measurement
             request.device_profile.DESCRIPTOR = lambda: None
@@ -760,7 +739,6 @@ class api:
             """Get response object for device profile update request."""
             return lambda: None
 
-    @staticmethod
     def GetDeviceProfileRequest(id=None):
         """Prepare device profile request object, only properties needd for test created."""
         request = lambda: None  # noqa: E731
@@ -768,15 +746,13 @@ class api:
         request.limit = None
         return request
 
-    @staticmethod
     def UpdateDeviceProfileRequest(device_profile):
         """Prepare device profile update request object, only properties needd for test created."""
         return lambda: None
 
     class GatewayServiceStub:
         """Gateway service implementation."""
-
-        def __init__(self, channel) -> None:
+        def __init__(self, channel):
             """Gateway service initialization implementation."""
 
         def List(self, listDevicesReq, metadata=None):
@@ -789,19 +765,57 @@ class api:
                 for i in range(no_of_gateways):
                     gateway = lambda: None  # noqa: E731
                     gateway.dev_eui = f"dev_eui{i}"
-                    gateway.gateway_id = "gatewayId0"  # f"gatewayId{i}"
+                    gateway.gateway_id = "gatewayId0"#f"gatewayId{i}"
                     gateway.tenant_id = f"TenantId{i}"
                     request.result.append(gateway)
             request.total_count = no_of_gateways
             return request
 
-    @staticmethod
     def ListGatewaysRequest():
         """Get list devices request object, only properties used in test are initialized."""
         request = lambda: None  # noqa: E731
         request.limit = None
-        # request.application_id = None
+        #request.application_id = None
         return request
+
+    class InternalServiceStub:
+        """Internal service implementation."""
+        def __init__(self, channel):
+            """Internal service initialization implementation."""
+
+        def DeleteApiKeyRequest():
+            """Internal service DeleteApiKeyRequest implementation."""
+            request = lambda: None  # noqa: E731
+            request.id = None
+            return request
+
+        def DeleteApiKey(self, deleteApiKeyReq, metadata):
+            """Internal service DeleteApiKey implementation."""
+            return lambda: None
+
+        def ListApiKeysRequest():
+            """Internal service ListApiKeysRequest implementation."""
+            request = lambda: None  # noqa: E731
+            request.limit = None
+            request.offset = None
+            request.is_admin = None
+            return request
+
+        def ListApiKeys(self, listApiKeysReq, metadata):
+            """Internal service ListApiKeys implementation."""
+            no_of_api_keys = 2
+            request = lambda: None  # noqa: E731
+            if listApiKeysReq.limit is not None:
+                request.result = []
+                for i in range(no_of_api_keys):
+                    api_key = lambda: None  # noqa: E731
+                    api_key.id = f"apikey{i}"
+                    api_key.name = f"apikey_name{i}"
+                    api_key.tenant_id = f"tenant_id{i}"
+                    api_key.is_admin = (i % 2) == 0
+                    request.result.append(api_key)
+            request.total_count = no_of_api_keys
+            return request
 
 
 class grpc:
@@ -820,7 +834,7 @@ class grpc:
             options: None,
             credentials: None,
             compression: None,
-        ) -> None:
+        ):
             """Prepare channel for test, raise exception if requested."""
             if not get_size("grpc"):
                 raise Exception("Could not connect to grpc server")  # pylint: disable=broad-exception-raised  # noqa: TRY002
@@ -835,12 +849,11 @@ class grpc:
 class dukpy:
     """dukpy class mock."""
 
-    def __init__(self) -> None:
+    def __init__(self):
         """Dukpy class init mock."""
 
     class JSInterpreter:
         """JSInterpreter class mock."""
-
         def evaljs(self, code, **kwargs):
             """JSInterpreter evaljs mock."""
             return "{aaa+}"

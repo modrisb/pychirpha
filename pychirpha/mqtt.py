@@ -43,7 +43,7 @@ from .const import (
     ENTITY_CATEGORY_DIAGNOSTIC,
     WARMSG_DEVCLS_REMOVED,
 )
-from .grpc import ChirpGrpc
+from pychirpha.grpc import ChirpGrpc
 
 INTEGRATION_BINARY_SENSOR = "binary_sensor"
 INTEGRATION_BUTTON = "button"
@@ -72,6 +72,12 @@ def convert_ret_val(ret_val):
 
 class ChirpToHA:
     """ChirpStack LoRaWAN MQTT interface."""
+    _wait_for_ha_online = None
+    _wait_for_dev_check = None
+    _wait_for_cur = None
+    _ha_online_event = None
+    _cur_delay_event = None
+    _dev_check_event = None
 
     def __init__(
         self,
@@ -179,10 +185,8 @@ class ChirpToHA:
                 "Bridge setup 'initialize' message published",
             )
         else:
-            self._ha_online_event = None
-            self._cur_delay_event = None
-            self._dev_check_event = None
             self._client.loop_read(1)
+
 
     def __del__(self):
         """Close MQTT conection and related threads on exit."""
@@ -213,6 +217,7 @@ class ChirpToHA:
         """MQTT unsubscribe api wrapper: throws error for failure cases."""
         ret_val = self._client.unsubscribe(topic)
         ex_message = convert_ret_val(ret_val)
+        _LOGGER.detail("unsubscribe from %s returned %s", topic, ex_message)
         if ex_message != "":
             raise MQTT_unsubscribe_failed(f"Topic {topic}, {ex_message}")
         _LOGGER.detail(
@@ -554,12 +559,6 @@ class ChirpToHA:
         """Process subscribed messages."""
         self.last_update = datetime.datetime.now(UTC_TIMEZONE)
         payload = message.payload.decode("utf-8")
-        _LOGGER.detail(
-            "MQTT message received: topic %s, payload %s, retain=%s",
-            message.topic,
-            payload,
-            message.retain,
-        )
         if message.topic == self._bridge_state_topic:
             self._bridge_state_received = True
             _LOGGER.info("Bridge state message received")
@@ -922,18 +921,18 @@ class ChirpToHA:
         self._client_closing = True
         if self._ha_online_event:
             self._ha_online_event.set()
-            if self._wait_for_ha_online.is_alive():
+            if self._wait_for_ha_online and self._wait_for_ha_online.is_alive():
                 self._wait_for_ha_online.join()
             self._ha_online_event = None
         if self._cur_delay_event:
             self._cur_delay_event.set()
-            if self._wait_for_cur.is_alive():
+            if self._wait_for_cur and self._wait_for_cur.is_alive():
                 with contextlib.suppress(RuntimeError):
                     self._wait_for_cur.join()
             self._cur_delay_event = None
         if self._dev_check_event:
             self._dev_check_event.set()
-            if self._wait_for_dev_check.is_alive():
+            if self._wait_for_dev_check and self._wait_for_dev_check.is_alive():
                 self._wait_for_dev_check.join()
             self._dev_check_event = None
 
