@@ -90,6 +90,8 @@ class ChirpGrpc:
             tenant_id = None
             for tenant_name, tenant_id in tenants_on_chirp.items():  # noqa: B007
                 break
+            self.tenant_id = tenant_id
+            self.tenant_name = tenant_name
             applications_on_chirp = self.get_tenant_applications(tenant_id)
             if len(applications_on_chirp) == 0:
                 application = api.ApplicationServiceStub(self._channel)
@@ -120,6 +122,7 @@ class ChirpGrpc:
                     application_name,
                 )
                 self.application_id = application_id
+                self.application_name = application_name
         for gateway in self.get_chirp_gateway_ids():
             _LOGGER.info(
                 "ChirpStack gateway IDs %s, tenant ID %s",
@@ -128,6 +131,7 @@ class ChirpGrpc:
             )
             if gateway.tenant_id == tenant_id:
                 self.gateway_id = gateway.gateway_id
+                self.gateway_name = gateway.name
                 break
         self.js_interpreter = dukpy.JSInterpreter()
         _LOGGER.info("ChirpStack application ID %s", self.application_id)
