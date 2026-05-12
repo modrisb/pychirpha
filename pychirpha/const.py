@@ -29,10 +29,6 @@ DEFAULT_MQTT_USER = ""
 DEFAULT_MQTT_PWD = ""
 DEFAULT_MQTT_DISC = "homeassistant"
 
-CONF_CHIRP_SERVER_RESERVED = "chirp_server_reserved"
-CONF_ERROR_CHIRP_CONN_FAILED = "chirpstack_connection_failed"
-CONF_ERROR_MQTT_CONN_FAILED = "mqtt_connection_failed"
-
 CONF_OPTIONS_DEBUG_PAYLOAD = "options_debug_print_payload"
 DEFAULT_OPTIONS_DEBUG_PAYLOAD = False
 CONF_OPTIONS_START_DELAY = "options_start_delay"
