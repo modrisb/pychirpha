@@ -22,7 +22,7 @@ CONF_MQTT_PWD = "mqtt_password"
 CONF_MQTT_DISC = "discovery_prefix"
 CONF_MQTT_CHIRPSTACK_PREFIX = "mqtt_chirpstack_prefix"
 
-DEFAULT_MQTT_SERVER = "localhost"
+DEFAULT_MQTT_SERVER = "core-mosquitto"
 DEFAULT_MQTT_PORT = 1883
 DEFAULT_MQTT_CHIRPSTACK_PREFIX = ""
 DEFAULT_MQTT_USER = ""
