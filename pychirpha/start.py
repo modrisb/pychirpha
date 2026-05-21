@@ -68,6 +68,7 @@ class run_chirp_ha:
                 config = json.load(file)
             config = INTERNAL_CONFIG | config
             self._config = config
+            _LOGGER.info("Current log levels: %s", logging.getLevelNamesMapping())
             try:
                 logging.getLogger().setLevel(config[CONF_OPTIONS_LOG_LEVEL].upper())
             except Exception as error:  # noqa: F841
