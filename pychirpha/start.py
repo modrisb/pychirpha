@@ -1,6 +1,6 @@
 """The Chirpstack LoRaWAN integration - setup."""
 from __future__ import annotations
-__version__ = "1.1.51"
+__version__ = "1.1.53"
 
 import logging
 import logging.handlers
@@ -68,18 +68,21 @@ class run_chirp_ha:
                 config = json.load(file)
             config = INTERNAL_CONFIG | config
             self._config = config
-            _LOGGER.info("Current log levels: %s", logging.getLevelNamesMapping())
-            try:
-                logging.getLogger().setLevel(config[CONF_OPTIONS_LOG_LEVEL].upper())
-            except Exception as error:  # noqa: F841
-                _LOGGER.warning("Wrong log level specified '%s', assuming 'info'", config[CONF_OPTIONS_LOG_LEVEL])
-                config[CONF_OPTIONS_LOG_LEVEL] = 'info'
-            _LOGGER.debug("Configuration %s:", self._config)
-            _LOGGER.info("ChirpHA started")
-            _LOGGER.debug("Logging level %s", config[CONF_OPTIONS_LOG_LEVEL].upper())
+            requestedLogLevelStr = config.get(CONF_OPTIONS_LOG_LEVEL, "")
+            logLevel = logging.getLevelNamesMapping().get(requestedLogLevelStr.upper(), logging.INFO)
+            setLogLevel = logging.getLevelName(logLevel).lower()
+            logging.getLogger().setLevel(setLogLevel)
+
+            _LOGGER.info("ChirpHA version %s started", __version__)
+            if setLogLevel != requestedLogLevelStr:
+                _LOGGER.warning("Wrong logging level specified '%s', using '%s'", requestedLogLevelStr, setLogLevel)
+                config[CONF_OPTIONS_LOG_LEVEL] = setLogLevel
+            else:
+                _LOGGER.debug("Logging level %s", setLogLevel)
             _LOGGER.detail("Current directory %s, module directory %s", os.getcwd(), str(Path(__file__).absolute().parent))
             _LOGGER.detail("Configuration file %s", self._configuration_file)
-            _LOGGER.info("Version %s", __version__)
+            _LOGGER.detail("Configuration %s:", self._config)
+
             self._grpc_client = ChirpGrpc(config, __version__)
             self._mqtt_client = ChirpToHA(config, __version__, CLASSES, self._grpc_client)
             self._mqtt_client._client.loop_forever()
