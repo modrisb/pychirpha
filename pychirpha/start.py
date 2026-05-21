@@ -72,7 +72,7 @@ class run_chirp_ha:
             logLevel = logging.getLevelNamesMapping().get(requestedLogLevelStr.upper(), logging.INFO)
             setLogLevel = logging.getLevelName(logLevel).lower()
             _LOGGER.info("Req log level %s, set numeric level %s, stringish %s", requestedLogLevelStr, logLevel, setLogLevel)
-            logging.getLogger().setLevel(setLogLevel)
+            logging.getLogger().setLevel(logLevel)
 
             _LOGGER.info("ChirpHA version %s started", __version__)
             if setLogLevel != requestedLogLevelStr:
