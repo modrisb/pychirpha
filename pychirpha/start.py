@@ -68,13 +68,13 @@ class run_chirp_ha:
                 config = json.load(file)
             config = INTERNAL_CONFIG | config
             self._config = config
-            _LOGGER.debug("Configuration %s:", self._config)
-            _LOGGER.info("ChirpHA started")
             try:
                 logging.getLogger().setLevel(config[CONF_OPTIONS_LOG_LEVEL].upper())
             except Exception as error:  # noqa: F841
                 _LOGGER.warning("Wrong log level specified '%s', assuming 'info'", config[CONF_OPTIONS_LOG_LEVEL])
                 config[CONF_OPTIONS_LOG_LEVEL] = 'info'
+            _LOGGER.debug("Configuration %s:", self._config)
+            _LOGGER.info("ChirpHA started")
             _LOGGER.debug("Logging level %s", config[CONF_OPTIONS_LOG_LEVEL].upper())
             _LOGGER.detail("Current directory %s, module directory %s", os.getcwd(), str(Path(__file__).absolute().parent))
             _LOGGER.detail("Configuration file %s", self._configuration_file)
