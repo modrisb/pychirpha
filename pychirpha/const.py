@@ -7,7 +7,7 @@ CONF_API_KEY = "api_connection_key"
 CONF_APPLICATION = "application_name"
 CONF_APPLICATION_ID = "application_id"
 
-DEFAULT_API_SERVER = ""
+DEFAULT_API_SERVER = "localhost"
 DEFAULT_API_PORT = 8080
 DEFAULT_API_KEY = ""
 DEFAULT_APPLICATION = "temp"
