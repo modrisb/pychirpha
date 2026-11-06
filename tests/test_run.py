@@ -355,6 +355,7 @@ def test_live_log_level_change(caplog):
     """Test log level change: set log_level to error/wromg level, info and check if log entry contents/counts are correct."""
 
     def run_test_live_log_level_change(config):
+        time.sleep(MIN_SLEEP+MIN_SLEEP)  # let the startup cur window close (and log) before counting records
         #mqtt.Client(mqtt.CallbackAPIVersion.VERSION2).wait_empty_queue()
         #assert "Bridge state message received," not in caplog.text
         assert "Bridge state message processing failed:" not in caplog.text
@@ -399,6 +400,9 @@ def test_device_status_refresh(caplog):
         mqtt.Client(mqtt.CallbackAPIVersion.VERSION2).wait_empty_queue()
         assert "Bridge device live status update requested" in caplog.text
         time.sleep(MIN_SLEEP+MIN_SLEEP+3)
+        # the cur window closed after restore_age; reopen it like a real live status request would
+        mqtt.Client(mqtt.CallbackAPIVersion.VERSION2).publish(topic, msg)
+        mqtt.Client(mqtt.CallbackAPIVersion.VERSION2).wait_empty_queue()
         for i in range(0, mqtt.Client(mqtt.CallbackAPIVersion.VERSION2).stat_devices):
             dev_eui = f"dev_eui{i}"
             topic = f"application/{config.get(CONF_APPLICATION_ID)}/device/{dev_eui}/event/cur"

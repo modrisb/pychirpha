@@ -272,7 +272,7 @@ class ChirpToHA:
             time_delta = self._cur_open_time + self._cur_age - time.time()
             while (
                 not self._client_closing
-                and not time_delta > 0
+                and time_delta > 0
                 and not self._cur_delay_event.wait(time_delta)
             ):
                 time_delta = self._cur_open_time + self._cur_age - time.time()

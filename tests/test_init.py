@@ -126,7 +126,7 @@ def test_setup_with_failing_mqtt_unsubscribe(caplog):
     def run_test_setup_with_failing_mqtt_unsubscribe(config):
         _LOGGER.info("run_test_setup_with_failing_mqtt_unsubscribe config %s", config)
         mqtt.Client(mqtt.CallbackAPIVersion.VERSION2).wait_empty_queue()
-        time.sleep(1)
+        time.sleep(2)  # start delay + restore age + a possible window extension, so the cur window closes in the test
 
     common.chirp_setup_and_run_test(caplog, run_test_setup_with_failing_mqtt_unsubscribe, conf_file=REGULAR_CONFIGURATION_NONZERO_DELAYS, test_params=dict(unsubscribe=0), a_live_at_end=False, check_msg_queue=True)
     assert "Chirp failed(1):" in caplog.text
